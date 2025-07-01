@@ -1,0 +1,17 @@
+
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Allow public read access to all files by default.
+    // This is useful for images, logos, etc. that need to be displayed on the public site.
+    match /{allPaths=**} {
+      allow read;
+      
+      // Restrict write access to authenticated users only.
+      // For more granular control, you could check for admin roles, specific user UIDs,
+      // or match file paths (e.g., `match /user-uploads/{userId}/{fileName}`).
+      allow write: if request.auth != null;
+    }
+  }
+}

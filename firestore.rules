@@ -1,0 +1,63 @@
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+  
+    // Helper functions
+    function isUserAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isUserAdmin() {
+      // Check if the user's UID is in the 'admins' collection
+      return exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    // PUBLIC: Anyone can read these collections.
+    match /procedures/{procedureId} {
+      allow read: if true;
+      allow write: if isUserAdmin();
+    }
+    match /promotions/{promotionId} {
+      allow read: if true;
+      allow write: if isUserAdmin();
+    }
+    
+    // USERS: Can only be read by admins or the user themselves.
+    // Anyone can create their own user document.
+    match /users/{userId} {
+      allow read: if isUserAdmin() || isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isUserAdmin() || isOwner(userId);
+      allow delete: if isUserAdmin();
+    }
+    
+    // ADMINS: Only readable by other admins. Never writable from client.
+    match /admins/{adminId} {
+      allow read: if isUserAdmin();
+      allow write: if false; // Should be managed from server/console
+    }
+    
+    // CONTACT MESSAGES: Only accessible by admins. Anyone can create.
+    match /contactMessages/{messageId} {
+        allow read, update, delete: if isUserAdmin();
+        allow create: if true;
+    }
+    
+    // STAFF: Readable by anyone (e.g., to show on a public team page), but only writable by admins.
+    match /staff/{staffId} {
+      allow read: if true;
+      allow write: if isUserAdmin();
+    }
+    
+    // APPOINTMENTS: Only accessible by admins.
+    match /appointments/{appointmentId} {
+      allow read, write, delete: if isUserAdmin();
+    }
+  }
+}
